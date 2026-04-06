@@ -1,10 +1,4 @@
-cd ~/my-epicbook-repo
-python3 -c "
-content = open('/dev/stdin').read()
-open('README.md', 'w').write(content)
-print('README written successfully')
-" << 'DONE'
-# EpicBook — AWS Deployment with Terraform and Ansible
+# EpicBook - AWS Deployment with Terraform and Ansible
 
 This repository provisions AWS infrastructure with Terraform and deploys the EpicBook application with Ansible.
 
@@ -16,7 +10,19 @@ Ansible configures the server and deploys the application by handling base OS up
 
 ## Repository Structure
 
-The project is split into two folders. The terraform/aws folder contains main.tf for all AWS resources, providers.tf for the AWS provider config, variables.tf for input variable definitions, outputs.tf which exposes the public IP, DB host, and admin user, and terraform.tfvars.example as a template for your local values. The ansible folder contains ansible.cfg for Ansible defaults and vault config, site.yml which orchestrates roles in order, inventory.ini.example as an inventory template, group_vars/web/main.yml for non-sensitive app variables, group_vars/web/vault.yml.example as a secrets template, and three roles: common for system updates and SSH hardening, nginx for Nginx install and reverse proxy config, and epicbook for app clone, Node.js, and PM2 startup.
+- terraform/aws/main.tf - All AWS resources
+- terraform/aws/providers.tf - AWS provider config
+- terraform/aws/variables.tf - Input variable definitions
+- terraform/aws/outputs.tf - Exposes public IP, DB host, admin user
+- terraform/aws/terraform.tfvars.example - Template, never commit real values
+- ansible/ansible.cfg - Ansible defaults and vault config
+- ansible/site.yml - Orchestration, runs roles in order
+- ansible/inventory.ini.example - Inventory template
+- ansible/group_vars/web/main.yml - Non-sensitive app variables
+- ansible/group_vars/web/vault.yml.example - Secrets template
+- ansible/roles/common - System updates and SSH hardening
+- ansible/roles/nginx - Nginx install and reverse proxy config
+- ansible/roles/epicbook - App clone, Node.js, PM2 startup
 
 ## Terraform File Responsibilities
 
@@ -48,40 +54,34 @@ A stable re-run of the playbook should return changed=0. All tasks are written u
 
 These files contain secrets and must never be committed to Git: terraform/aws/terraform.tfvars, ansible/.vault_pass, ansible/group_vars/web/vault.yml, and ansible/inventory.ini.
 
-Example terraform.tfvars values:
-region = "us-east-1"
-resource_prefix = "epicbook"
-instance_type = "t3.micro"
-admin_username = "ubuntu"
-ssh_public_key_path = "~/.ssh/id_rsa_epicbook.pub"
-db_name = "bookstore"
-db_user = "admin"
-db_password = "REPLACE_WITH_STRONG_PASSWORD"
+Example terraform.tfvars:
+region = us-east-1
+resource_prefix = epicbook
+instance_type = t3.micro
+admin_username = ubuntu
+ssh_public_key_path = ~/.ssh/id_rsa_epicbook.pub
+db_name = bookstore
+db_user = admin
+db_password = REPLACE_WITH_STRONG_PASSWORD
 
-Example ansible/group_vars/web/main.yml values:
-app_repo: "https://github.com/pravinmishraaws/theepicbook.git"
-app_dest: "/var/www/epicbook"
-app_user: "www-data"
-app_group: "www-data"
-nginx_site_name: "epicbook"
+Example ansible/group_vars/web/main.yml:
+app_repo: https://github.com/pravinmishraaws/theepicbook.git
+app_dest: /var/www/epicbook
+app_user: www-data
+app_group: www-data
+nginx_site_name: epicbook
 app_port: 3000
-db_user: "admin"
-db_name: "bookstore"
+db_user: admin
+db_name: bookstore
 
-Example ansible/group_vars/web/vault.yml values:
-db_password: "REPLACE_WITH_STRONG_PASSWORD"
+Example ansible/group_vars/web/vault.yml:
+db_password: REPLACE_WITH_STRONG_PASSWORD
 
 Encrypt it after creating:
 cd ansible
 ansible-vault encrypt group_vars/web/vault.yml
 
-Example ansible/.vault_pass content:
-REPLACE_WITH_YOUR_VAULT_PASSWORD
-
-Set permissions after creating:
-chmod 600 ansible/.vault_pass
-
-Example ansible/inventory.ini content:
+Example ansible/inventory.ini:
 [web]
 EC2_PUBLIC_IP
 
@@ -98,12 +98,9 @@ git clone https://github.com/PreetyTech/epicbook-iac-ansible.git
 cd epicbook-iac-ansible
 
 Step 2 - Create SSH key pair:
-ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa_epicbook -N ""
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa_epicbook -N 
 chmod 600 ~/.ssh/id_rsa_epicbook
 chmod 644 ~/.ssh/id_rsa_epicbook.pub
-
-Verify the files exist:
-ls -l ~/.ssh/id_rsa_epicbook ~/.ssh/id_rsa_epicbook.pub
 
 Step 3 - Configure Terraform variables:
 cd terraform/aws
@@ -115,25 +112,23 @@ terraform init
 terraform validate
 terraform plan
 terraform apply
-
-After apply confirm that ansible/inventory.ini was generated with the correct EC2 IP, that db_host in the inventory matches the RDS endpoint, and that the public IP is shown in terraform output.
+After apply confirm that ansible/inventory.ini was generated with the correct EC2 IP and that db_host matches the RDS endpoint.
 
 Step 5 - Prepare Ansible secrets:
 cd ../../ansible
 cp group_vars/web/vault.yml.example group_vars/web/vault.yml
-Edit vault.yml with your real database password. Then encrypt it:
-echo "your-vault-password" > .vault_pass
+echo your-vault-password > .vault_pass
 chmod 600 .vault_pass
 ansible-vault encrypt group_vars/web/vault.yml
 
-Step 6 - Verify SSH access to EC2:
+Step 6 - Verify SSH access:
 ssh -i ~/.ssh/id_rsa_epicbook ubuntu@EC2_PUBLIC_IP hostname
 
 Step 7 - Run the Ansible playbook:
 ansible-playbook -i inventory.ini site.yml
 First run deploys everything. Each subsequent run should return mostly ok with changed=0.
 
-Step 8 - Open the application in browser:
+Step 8 - Open in browser:
 http://EC2_PUBLIC_IP
 Confirm the EpicBook bookstore loads with books, cart, and checkout working.
 
@@ -143,31 +138,39 @@ A clean stable run returns changed=0 across all tasks.
 
 ## Day-2 Operations
 
-To update infrastructure run terraform plan then terraform apply from the terraform/aws folder. If EC2 is replaced and the IP changes, inventory.ini is regenerated automatically.
+Update infrastructure:
+cd terraform/aws
+terraform plan
+terraform apply
+If EC2 is replaced and the IP changes, inventory.ini is regenerated automatically.
 
-To redeploy the application only run ansible-playbook -i inventory.ini site.yml from the ansible folder.
+Redeploy application only:
+cd ansible
+ansible-playbook -i inventory.ini site.yml
 
-To destroy all infrastructure run terraform destroy from the terraform/aws folder. Warning: this permanently removes EC2, RDS, and all data unless you have a backup strategy in place.
+Destroy all infrastructure:
+cd terraform/aws
+terraform destroy
+Warning: this permanently removes EC2, RDS, and all data unless you have a backup strategy in place.
 
 ## Troubleshooting
 
-Terraform key pair file not found: Ensure the .pub file exists at the path specified in terraform.tfvars before running apply.
+Terraform key pair file not found: Ensure the .pub file exists at the path in terraform.tfvars before running apply.
 
-SSH connection timeout: Confirm you are using the current IP from the generated ansible/inventory.ini. Verify the EC2 security group has inbound TCP port 22 open. Confirm the private key on your machine matches the public key path used by Terraform.
+SSH connection timeout: Confirm you are using the current IP from ansible/inventory.ini. Verify the EC2 security group has inbound TCP port 22 open. Confirm the private key matches the public key path used by Terraform.
 
-MySQL access denied during deployment: Confirm db_user, db_name, and db_password are identical in terraform.tfvars and ansible/group_vars/web/vault.yml. Confirm the RDS endpoint in inventory.ini is correct and active.
+MySQL access denied: Confirm db_user, db_name, and db_password are identical in terraform.tfvars and ansible/group_vars/web/vault.yml. Confirm the RDS endpoint in inventory.ini is correct.
 
-Ansible reports changed on every run: Replace unconditional shell and command tasks with state-aware Ansible modules. Add when conditions to tasks that should only run once.
+Ansible changed on every run: Replace unconditional shell and command tasks with state-aware Ansible modules. Add when conditions to tasks that should only run once.
 
 ## Recommended Improvements
 
-- Restrict SSH inbound rule from 0.0.0.0/0 to your specific IP address
-- Add HTTPS using AWS ACM certificate and an Application Load Balancer
-- Move db_password to AWS Secrets Manager for production deployments
-- Add terraform fmt -check and ansible-lint to a CI/CD pipeline
-- Add Ansible role tags for selective redeployment without running all roles
+- Restrict SSH inbound from 0.0.0.0/0 to your specific IP address
+- Add HTTPS using AWS ACM and an Application Load Balancer
+- Move db_password to AWS Secrets Manager for production
+- Add terraform fmt check and ansible-lint to a CI/CD pipeline
+- Add Ansible role tags for selective redeployment
 
 ## Application Source
 
 EpicBook application: https://github.com/pravinmishraaws/theepicbook
-DONE
