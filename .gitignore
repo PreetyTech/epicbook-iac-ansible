@@ -1,0 +1,20 @@
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform/aws/terraform.tfvars
+
+# Ansible secrets
+ansible/.vault_pass
+ansible/group_vars/web/vault.yml
+ansible/inventory.ini
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+*.log
